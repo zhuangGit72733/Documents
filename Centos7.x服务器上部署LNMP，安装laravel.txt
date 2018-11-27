@@ -1,0 +1,174 @@
+一、Nginx安装
+
+1.1创建yum源文件
+vi /etc/yum.repos.d/nginx.repo
+查看
+baseurl=http://nginx.org/packages/OS/OSRELEASE/$basearch/
+修改
+baseurl=http://nginx.org/packages/centos/7/$basearch/
+1.2查看yum源中的nginx
+yum list|grep nginx 
+安装nginx
+yum install nginx
+开机自启nginx
+systemctl enable nginx
+启动nginx
+systemctl start nginx
+浏览器访问服务器IP，看看是否显示成功
+默认配置位置 
+/etc/nginx/nginx.conf
+/etc/nginx/conf.d/default.conf
+
+二、PHP7.2安装
+
+2.1拉取php7.2的包
+yum install epel-release
+rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm
+2.2安装PHP和扩展
+yum install mod_php72w php72w-opcache php72w-common php72w-gd php72w-mbstring php72w-mysql php72w-xml php72w-cli php72w-fpm php72w-devel
+2.3配置文件位置
+/etc/php.ini
+2.4查看安装的php扩展
+php -m
+2.5开启php-fpm模式
+systemctl start php-fpm
+设置php-fpm开机自启
+systemctl enable php-fpm
+结合php-fpm与nginx
+vi /etc/nginx/conf.d/default.conf
+设置root路径 和转发给php-fpm处理
+查看
+   location / {
+        root   /data/www/;  //配置root路径   /路径/www/html/laravel项目名/public/
+        index index.php  index.html index.htm;
+        try_files $uri $uri/ /index.php?$query_string;//隐藏index.php URL路径
+    }
+
+    location ~* \.php$ {//转发给php-fpm处理
+        fastcgi_index   index.php;
+        fastcgi_pass    127.0.0.1:9000;
+        fastcgi_param   SCRIPT_NAME        $fastcgi_script_name;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;//$document_root修改为绝对路径/路径/www/html/laravel项目名/public/
+        fastcgi_param  PATH_INFO  $fastcgi_path_info;
+        fastcgi_param  PATH_TRANSLATED  $document_root$fastcgi_path_info;
+        include        fastcgi_params;
+    }
+语法检测
+nginx -t
+热重启
+nginx -s reload
+递归创建根目录
+mkdir -p /data/www
+ 创建空文件index.php
+touch /data/www/phpinfo.php
+码入
+<?php
+phpinfo();
+?>
+访问服务器下的IP/phpinfo.php，查看是否显示成功
+
+如发现file not found 404错误
+vi /etc/nginx/conf.d/default.conf
+修改$document_root
+fastcgi_param   SCRIPT_FILENAME    /data/www$fastcgi_script_name;
+nginx -s reload
+
+
+三、mysql5.6安装
+
+3.1由于contos7 默认使用mariadb
+查看源
+rpm -qa|grep -i mariadb 
+mariadb-libs-5.5.60-1.el7_5.x86_64//命令行显示
+ 卸载源
+rpm -qa|grep mariadb|xargs rpm -e --nodeps
+再次查看就为空了
+rpm -qa|grep -i mariadb 
+下载安装包
+wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
+rpm -ivh mysql-community-release-el7-5.noarch.rpm
+ 列出可安装mysql
+yum repolist all | grep mysql
+默认mysql5.6可安装 
+yum install mysql-server
+mysql开启
+systemctl start mysqld
+默认开机自启
+systemctl enable mysqld
+mysql增加密码 和允许远程登录
+
+#最开始没有密码
+mysql -u root
+use mysql;
+update user set password=PASSWORD("xxxxxxxxx") where User = 'root';
+flush privileges;
+# root密码设定完成
+
+GRANT ALL PRIVILEGES ON *.* TO root@"%" IDENTIFIED BY "xxxxxxxxx";
+# 允许远程root登录完成
+
+四、git安装
+
+yum install git -y
+在/data/www/下拉取github代码
+git clone https://github.com/whyiyhw/hello-laravel.git
+mv hello-laravel/ blog/ 更改文件名
+
+五、composer安装
+
+下载安装脚本 － composer-setup.php － 到当前目录即/data/www/
+php -r "copy('https://install.phpcomposer.com/installer', 'composer-setup.php');"
+执行安装过程。
+php composer-setup.php
+删除安装脚本
+php -r "unlink('composer-setup.php');"
+添加到全局
+mv composer.phar /bin/composer
+更换镜像到国内
+composer config -g repo.packagist composer https://packagist.phpcomposer.com
+
+六、laravel运行
+6.1.env配置
+cd /data/www/blog/
+cp .env.example .env
+
+vim .env
+#修改
+DB_PORT=3306
+DB_DATABASE=xxxx      //数据库
+DB_USERNAME=xxxx    //mysql账号
+DB_PASSWORD=xxxx   //mysql密码
+CACHE_DRIVER=array
+
+#更新组件
+composer update
+#新建秘钥
+php artisan key:generate
+
+6.2设置域名解析
+vi nginx vim /etc/nginx/conf.d/default.conf
+
+  server_name  www.blogxy.cn;//服务器域名
+
+    location / {
+        root   /data/www/blog/public;//项目路径
+        try_files $uri $uri/ /index.php?$query_string;//隐藏index.phpURL字段
+        index index.php  index.html index.htm;
+    }
+
+   location ~ \.php(.*)$ {
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_split_path_info  ^((?U).+\.php)(/?.+)$;
+            fastcgi_param  SCRIPT_FILENAME  /data/www/blog/public$fastcgi_script_name;//绝对路径配置
+            fastcgi_param  PATH_INFO  $fastcgi_path_info;
+            fastcgi_param  PATH_TRANSLATED  $document_root$fastcgi_path_info;
+            include        fastcgi_params;
+        }
+nginx -t && nginx -s reload 检测热重启
+chmod -R 777 storage/ 赋予运行目录执行权限
+
+
+参考文献
+服务器上部署LNMP，安装laravel
+https://laravel-china.org/topics/17508
