@@ -1,0 +1,9 @@
+点击Languages & Frameworks->PHP->Code Sniffer点击Configuration右侧的按钮
+写入路径
+
+C:\phpStudy\PHPTutorial\php\php-7.2.1-nts\PHP_CodeSniffer\bin\phpcs.bat
+
+点击Editor->Inspections展开点击右侧的PHP里的Quality tools
+里的PHP Code Sniffer validation进行配置PSR-2验证 
+
+https://blog.csdn.net/seven_2016/article/details/76093609

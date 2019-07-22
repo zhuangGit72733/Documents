@@ -1,0 +1,27 @@
+laravel-admin安装
+1.
+composer config repo.packagist composer  https://mirrors.aliyun.com/composer/
+composer require encore/laravel-admin
+2.
+php artisan vendor:publish --provider="Encore\Admin\AdminServiceProvider"
+ Schema::defaultStringLength(191);
+3.
+php artisan admin:install
+
+
+4.建立Article模型，articles数据库
+  php artisan admin:make ArticlesController --model App\Models\Article
+  
+
+
+touch字段会自动进行插入操作
+
+
+
+关于excel导出乱码问题
+添加到vendor/encore/laravel-admin/Grid/Exporters/CsvExporter.php
+ public function export()
+    {
+        $filename = $this->getTable().'.csv';
+       //乱码问题解决
+        print(chr(0xEF).chr(0xBB).chr(0xBF));

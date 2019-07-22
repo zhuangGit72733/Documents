@@ -1,0 +1,110 @@
+一：安装ftp
+
+1、检查是否安装了 ftp ：（下图是已安装的效果，没安装没有展示）
+
+　　rpm -qa|grep vsftpd
+已安装跳转到二
+2、安装指令：（找一个  -y  指令）
+
+　　yum install -y vsftpd
+
+3、安装完成后执行步骤1  就可以看到ftp的版本信息
+
+4、安装完成后，启动 FTP 服务：
+
+　　service vsftpd start
+
+5、启动后，可以看到系统已经监听了 21 端口：
+
+　　netstat -nltp | grep 21
+
+6、禁用匿名用户
+
+　　vi /etc/vsftpd/vsftpd.conf  (anonymous_enable=NO-----yes改为no)
+
+7、保存后重启
+
+　　service vsftpd restart
+
+二：创建用户权限
+[
+1,创建ftp组
+groupadd 组名
+2，查看用户所在的组
+ groups 用户
+]
+1、创建用户，并指定分组和主目录（根据自己的需求设定参数）
+
+        useradd -d /opt/reconciliation -s /sbin/nologin -g ftpGroup -G root ftpUser
+
+        解析：
+
+              useradd 添加用户ftpUser
+
+              -d 指定用户根目录为/opt/reconciliation，可以访问的路径
+
+              -s 指定shell脚本为/sbin/nologin，表示不允许shell登录   （vi /etc/passwd  编辑用户shell权限的地方）
+
+              -g 创建分组ftpGroup
+
+              -G 指定root分组
+
+        PS：创建有问题可以删除重新创建 userdel -r ftpUser
+
+ 
+
+2、设定密码
+　　passwd ftpUser
+
+3、设置访问权限
+
+       chown ftpUser /opt/reconciliation/
+
+更改ftp配置文件
+　　修改配置文件/etc/vsftpd/vsftpd.conf并设定或删掉注释：
+
+
+　　userlist_enable=NO
+　　anonymous_enable=NO
+　　chroot_list_enable=YES
+　　chroot_list_file=/etc/vsftpd/chroot_list
+
+
+　　打开vi /etc/vsftpd/user_list并增加一行：
+　　ftpUser
+　　新建文件vi /etc/vsftpd/chroot_list并增加一行
+　　ftpUser
+
+ 
+
+4、配置用户ftp权限及访问路径限制：
+
+
+　　此时用usertest登陆系统ftp，是否可以访问？如果无法访问，说明我们的ftp做了限制。打开/etc/vsftpd/vsftpd.conf，查找userlist_enable、userlist_deny、userlist_file。如果  userlist_deny=NO：只允许userlist_file文件中的用户可访问ftp；如果 userlist_deny=YES：userlist_file文件中列举的用户不能通过ftp访问系统。userlist_enable是该功能的开 关。我们的系统配置如下：
+
+　　userlist_enable=YES
+　　userlist_deny=NO
+　　userlist_file=/etc/vsftpd/user_list
+　　所以需要把用户加入到/etc/vsftpd/user_list文件中，每个用户一行。
+
+
+　　由于该主目录是mpsp用户建的，usertest是mpsp组的成员，所以usertest默认具有增删查改权限；而usertest作为 mpsp组成员，对/home/mpsp下的所有路径具有访问权限（根据各目录的权限设置，默认是这样），登录ftp后会发现，usertest用户可以 访问其他目录，并且具有mpsp组的权限，这样做是不允许的，我们需要将usertest用户的访问范围控制在其主目录下。方法如下：
+
+
+　　1. cd /etc/vsftpd 进入ftp配置文件目录
+　　2. vi vsftpd.conf编辑此文件，找到#chroot_list_enable=YES，删除前面的那个#号，表示开启此限制功能
+　　找到chroot_list_file：chroot_list_file=/etc/vsftpd/chroot_list
+　　3. 编辑chroot_list文件，加入你要限制的用户名，一行一个用户。
+
+
+　　如果更新了vsftpd.conf，一定要重启ftp，命令如下：
+　　［root@linux sir001 root］# /etc/init.d/vsftpd restart
+　　关闭vsftpd：［ 确定］
+　　为vsftpd 启动vsftpd：［ 确定］
+　　启动FTP服务
+　　service vsftpd start
+　　还有两个参数：stop、restart
+
+参考文件
+https://www.cnblogs.com/xixihahaheihei/p/9224395.html
+ 

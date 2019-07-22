@@ -20,3 +20,6 @@ QUEUE_DRIVER=     (file)=>redis
 服务器上redis安装
 https://www.wmyeah.com/blog/dev_Linux_redis_01.html
 https://laravel-china.org/docs/laravel/5.5/redis/1331
+
+//wget方式安裝
+https://www.cnblogs.com/therunningfish/p/9535022.html
